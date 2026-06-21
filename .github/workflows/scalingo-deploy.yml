@@ -24,19 +24,15 @@ jobs:
           fetch-depth: 0
 
       - name: Configure Scalingo SSH key
+        env:
+          SCALINGO_SSH_KEY: ${{ secrets.SCALINGO_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
-          install -m 600 /dev/stdin ~/.ssh/id_scalingo <<'KEY'
-          ${{ secrets.SCALINGO_SSH_KEY }}
-          KEY
-          cat > ~/.ssh/config <<'CFG'
-          Host ssh.osc-fr1.scalingo.com
-            User git
-            IdentityFile ~/.ssh/id_scalingo
-            StrictHostKeyChecking no
-            UserKnownHostsFile /dev/null
-          CFG
+          printf '%s\n' "$SCALINGO_SSH_KEY" > ~/.ssh/id_scalingo
+          chmod 600 ~/.ssh/id_scalingo
+          printf 'Host ssh.osc-fr1.scalingo.com\n  User git\n  IdentityFile ~/.ssh/id_scalingo\n  StrictHostKeyChecking no\n  UserKnownHostsFile /dev/null\n' > ~/.ssh/config
           chmod 600 ~/.ssh/config
+          ssh-keygen -y -f ~/.ssh/id_scalingo > /dev/null && echo "SSH key valid"
 
       - name: Push to Scalingo (Docker build + deploy)
         run: |
