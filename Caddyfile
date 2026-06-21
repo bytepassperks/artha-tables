@@ -1,0 +1,36 @@
+{
+	# Scalingo terminates TLS at its router and forwards plain HTTP to $PORT,
+	# so Caddy must NOT attempt its own HTTPS. auto_https off + a bare ":PORT"
+	# listener keeps this a plain-HTTP reverse proxy.
+	auto_https off
+	{$BASEROW_CADDY_GLOBAL_CONF}
+}
+
+{$BASEROW_CADDY_ADDRESSES} {
+	handle /api/* {
+		reverse_proxy {$PRIVATE_BACKEND_URL:localhost:8000}
+	}
+
+	handle /ws/* {
+		reverse_proxy {$PRIVATE_BACKEND_URL:localhost:8000}
+	}
+
+	handle_path /media/* {
+		@downloads {
+			query dl=*
+		}
+		header @downloads Content-disposition "attachment; filename={query.dl}"
+
+		file_server {
+			root {$MEDIA_ROOT:/baserow/media/}
+		}
+	}
+
+	handle_path /static/* {
+		file_server {
+			root {$STATIC_ROOT:/baserow/static/}
+		}
+	}
+
+	reverse_proxy {$PRIVATE_WEB_FRONTEND_URL:localhost:3000}
+}
