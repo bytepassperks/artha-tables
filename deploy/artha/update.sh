@@ -179,7 +179,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
     git merge --abort 2>/dev/null || true
     die "DRY-RUN: merge CONFLICT against upstream $UPSTREAM_SHA — needs a human. Production untouched."
   fi
-  "$HERE/verify-rebrand.sh"
+  bash "$HERE/verify-rebrand.sh"
   if [ -n "${BUILD_CMD:-}" ]; then
     log "DRY-RUN: building assets to prove they compile against the merged tree"
     eval "$BUILD_CMD"
@@ -194,7 +194,7 @@ if ! git merge --no-edit --no-ff "$UPSTREAM_REMOTE/$UPSTREAM_BRANCH"; then
   git merge --abort 2>/dev/null || true
   die "merge CONFLICT against upstream $UPSTREAM_SHA — needs a human. Production untouched."
 fi
-"$HERE/verify-rebrand.sh" || die "rebrand drifted after merge — fix deploy/artha first. Production untouched."
+bash "$HERE/verify-rebrand.sh" || die "rebrand drifted after merge — fix deploy/artha first. Production untouched."
 
 # ── rebuild + commit assets ───────────────────────────────────────────────────
 configure_push_auth
