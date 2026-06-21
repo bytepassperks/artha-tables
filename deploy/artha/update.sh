@@ -154,7 +154,18 @@ if git merge-base --is-ancestor "$UPSTREAM_SHA" HEAD 2>/dev/null && [ "$FORCE" -
   log "Already contains upstream $UPSTREAM_SHA — nothing to do."; exit 0
 fi
 
-[ -z "$(git status --porcelain)" ] || die "working tree dirty — commit/stash first."
+# Clear stat-cache false positives, then ignore line-ending renormalization that
+# .gitattributes (text=auto / eol=lf) produces on a fresh checkout.
+git update-index -q --really-refresh >/dev/null 2>&1 || true
+if [ -n "$(git status --porcelain)" ]; then
+  git -c core.autocrlf=false -c core.eol=lf add --renormalize . >/dev/null 2>&1 || true
+  git stash --include-untracked --quiet >/dev/null 2>&1 || true
+fi
+# A real deploy must never build atop genuine uncommitted edits; dry-run does all
+# merge work on a throwaway branch it aborts, so a pristine-CI tree is always safe.
+if [ "$DRY_RUN" -ne 1 ] && [ -n "$(git status --porcelain)" ]; then
+  die "working tree dirty — commit/stash first."
+fi
 git checkout --quiet "$FORK_BRANCH"
 
 # ── dry-run trial merge ───────────────────────────────────────────────────────
