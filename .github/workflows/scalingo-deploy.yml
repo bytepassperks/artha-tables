@@ -1,0 +1,47 @@
+name: Deploy Artha Tables to Scalingo
+
+# Pushing to the Scalingo git remote triggers a server-side Dockerfile build +
+# deploy. Runs on every push to this branch (the auto-deploy backbone) and on
+# manual dispatch. GitHub-hosted runners are free for public repos.
+on:
+  push:
+    branches: [scalingo-deploy]
+  workflow_dispatch:
+
+concurrency:
+  group: scalingo-deploy-artha-tables
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout deploy branch
+        uses: actions/checkout@v4
+        with:
+          ref: scalingo-deploy
+          fetch-depth: 0
+
+      - name: Configure Scalingo SSH key
+        run: |
+          mkdir -p ~/.ssh
+          install -m 600 /dev/stdin ~/.ssh/id_scalingo <<'KEY'
+          ${{ secrets.SCALINGO_SSH_KEY }}
+          KEY
+          cat > ~/.ssh/config <<'CFG'
+          Host ssh.osc-fr1.scalingo.com
+            User git
+            IdentityFile ~/.ssh/id_scalingo
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+          CFG
+          chmod 600 ~/.ssh/config
+
+      - name: Push to Scalingo (Docker build + deploy)
+        run: |
+          git config user.email deploy@artha
+          git config user.name artha-deploy
+          git remote add scalingo git@ssh.osc-fr1.scalingo.com:artha-tables.git
+          echo "Pushing $(git rev-parse --short HEAD) to Scalingo master..."
+          git push scalingo HEAD:master --force
