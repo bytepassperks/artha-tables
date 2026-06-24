@@ -43,4 +43,27 @@ for d in "$WF/.nuxt/dist/client" "$WF/.nuxt/dist/server"; do
   done
 done
 
+# --- Fix missing i18n keys in adminDashboard (all languages) ---
+# The admin dashboard component uses keys like adminDashboard.noWorkspace,
+# adminDashboard.noWorkspaceDescription, adminDashboard.addNew but these
+# are missing from the locale bundles. We inject them into the compiled
+# locale chunk so $t() resolves them instead of showing raw key paths.
+LOCALE_CHUNK=$(grep -rl 'adminDashboard:{title:"Dashboard"' "$WF/.nuxt/dist/client" 2>/dev/null | head -1)
+if [ -n "$LOCALE_CHUNK" ]; then
+  echo "Patching missing adminDashboard i18n keys in $(basename "$LOCALE_CHUNK")"
+  # English: add missing keys after viewAll:"View all"
+  sed -i 's/viewAll:"View all"}/viewAll:"View all",noWorkspace:"No workspace",noWorkspaceDescription:"Create a new workspace to get started",addNew:"Create workspace"}/g' "$LOCALE_CHUNK"
+  # French
+  sed -i 's/viewAll:"Consulter"}/viewAll:"Consulter",noWorkspace:"Aucun espace de travail",noWorkspaceDescription:"Créez un nouvel espace de travail pour commencer",addNew:"Créer un espace de travail"}/g' "$LOCALE_CHUNK"
+  # Dutch
+  sed -i 's/viewAll:"Alles bekijken"}/viewAll:"Alles bekijken",noWorkspace:"Geen werkruimte",noWorkspaceDescription:"Maak een nieuwe werkruimte aan om te beginnen",addNew:"Werkruimte aanmaken"}/g' "$LOCALE_CHUNK"
+  # German
+  sed -i 's/viewAll:"Alle anzeigen"}/viewAll:"Alle anzeigen",noWorkspace:"Kein Arbeitsbereich",noWorkspaceDescription:"Erstellen Sie einen neuen Arbeitsbereich",addNew:"Arbeitsbereich erstellen"}/g' "$LOCALE_CHUNK"
+  # Spanish
+  sed -i 's/viewAll:"Ver todo"}/viewAll:"Ver todo",noWorkspace:"Sin espacio de trabajo",noWorkspaceDescription:"Crea un nuevo espacio de trabajo para empezar",addNew:"Crear espacio de trabajo"}/g' "$LOCALE_CHUNK"
+  # Fallback: any remaining language that still ends with viewAll:*}
+  # Add English keys as fallback for untranslated languages
+  sed -i 's/\(viewAll:"[^"]*"\)}/\1,noWorkspace:"No workspace",noWorkspaceDescription:"Create a new workspace to get started",addNew:"Create workspace"}/g' "$LOCALE_CHUNK"
+fi
+
 echo "ARTHA_REBRAND_DONE"
